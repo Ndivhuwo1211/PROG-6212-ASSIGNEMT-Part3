@@ -1,0 +1,326 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>RaceDay.Api</name>
+    </assembly>
+    <members>
+        <member name="T:RaceDay.Api.Controllers.AuthController">
+            <summary>Registration, login and logout.</summary>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.AuthController.Register(RaceDay.Api.Dtos.RegisterRequest)">
+            <summary>Registers a new Organiser or Participant account.</summary>
+            <remarks>
+            Participants can self-register. To stop anyone from granting themselves Organiser rights,
+            registering as an Organiser also requires the secret <c>organiserCode</c> configured on the server.
+            The password is hashed (PBKDF2 + salt) before it is stored.
+            </remarks>
+            <response code="201">Account created. Returns the new user (never the password).</response>
+            <response code="400">Validation failed (e.g. invalid email, short password, unknown role).</response>
+            <response code="403">Organiser registration code missing or incorrect.</response>
+            <response code="409">An account with this email already exists.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.AuthController.Login(RaceDay.Api.Dtos.LoginRequest)">
+            <summary>Logs a user in and starts a server-side session storing their user ID and role.</summary>
+            <remarks>The session cookie returned is sent automatically on later requests (including from Swagger UI).</remarks>
+            <response code="200">Login successful. Returns the user and their role.</response>
+            <response code="401">Invalid email or password.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.AuthController.Logout">
+            <summary>Ends the current session.</summary>
+            <response code="200">Logged out.</response>
+            <response code="401">No active session.</response>
+        </member>
+        <member name="T:RaceDay.Api.Controllers.CategoriesController">
+            <summary>Age / distance categories for an event (e.g. "Under 20", "21km Senior").</summary>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.CategoriesController.GetCategories(System.Int32)">
+            <summary>Lists the categories available for an event. Public.</summary>
+            <response code="200">The event's categories.</response>
+            <response code="404">Event does not exist.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.CategoriesController.CreateCategory(System.Int32,RaceDay.Api.Dtos.CategoryRequest)">
+            <summary>Adds a category to an event. Only the owning Organiser may do this.</summary>
+            <response code="201">The created category.</response>
+            <response code="400">Validation failed (e.g. minAge greater than maxAge).</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Event does not exist.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.CategoriesController.UpdateCategory(System.Int32,RaceDay.Api.Dtos.CategoryRequest)">
+            <summary>Updates a category. Only the Organiser who owns the event may do this.</summary>
+            <response code="200">The updated category.</response>
+            <response code="400">Validation failed.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Category does not exist.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.CategoriesController.DeleteCategory(System.Int32)">
+            <summary>Deletes a category. Only the Organiser who owns the event may do this.</summary>
+            <response code="204">Category deleted.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Category does not exist.</response>
+            <response code="409">Participants are already enrolled in this category.</response>
+        </member>
+        <member name="T:RaceDay.Api.Controllers.EnrolmentsController">
+            <summary>Participants entering events; Organisers viewing and managing those enrolments.</summary>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EnrolmentsController.Enrol(System.Int32,RaceDay.Api.Dtos.EnrolRequest)">
+            <summary>Enrols the logged-in Participant in an event under the chosen category.</summary>
+            <remarks>New enrolments start with the status "Pending". The category must belong to the event.</remarks>
+            <response code="201">The new enrolment.</response>
+            <response code="400">Invalid category for this event, or the event has already taken place.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Only Participants can enrol.</response>
+            <response code="404">Event does not exist.</response>
+            <response code="409">The Participant is already enrolled in this event.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EnrolmentsController.GetMyEnrolments">
+            <summary>Lists every event the logged-in Participant has enrolled in, with status.</summary>
+            <response code="200">The Participant's enrolments, soonest event first.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Only Participants can use this endpoint.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EnrolmentsController.GetEventEnrolments(System.Int32)">
+            <summary>Lists all enrolments for an event. Only the owning Organiser may do this.</summary>
+            <response code="200">Enrolments including participant name, category and status.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Event does not exist.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EnrolmentsController.UpdateStatus(System.Int32,RaceDay.Api.Dtos.UpdateEnrolmentStatusRequest)">
+            <summary>Changes an enrolment's status (Pending, Confirmed or Cancelled). Owning Organiser only.</summary>
+            <response code="200">The updated enrolment.</response>
+            <response code="400">Unknown status.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Enrolment does not exist.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EnrolmentsController.CancelEnrolment(System.Int32)">
+            <summary>Cancels (removes) the logged-in Participant's own enrolment.</summary>
+            <response code="204">Enrolment removed.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not a Participant, or the enrolment belongs to someone else.</response>
+            <response code="404">Enrolment does not exist.</response>
+            <response code="409">A result has already been recorded for this enrolment.</response>
+        </member>
+        <member name="T:RaceDay.Api.Controllers.EventsController">
+            <summary>Create, view, update and delete race events.</summary>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EventsController.GetEvents(System.String,System.String,System.String,System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.Boolean)">
+            <summary>Lists upcoming events with optional filters. Public.</summary>
+            <param name="eventType">Filter by type: Run, Walk or Cycle.</param>
+            <param name="location">Filter by location (contains).</param>
+            <param name="search">Filter by event name (contains).</param>
+            <param name="fromDate">Only events on or after this date.</param>
+            <param name="toDate">Only events on or before this date.</param>
+            <param name="includePast">Set true to include events that have already taken place.</param>
+            <response code="200">Matching events, soonest first.</response>
+            <response code="400">Invalid eventType filter.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EventsController.GetMyEvents">
+            <summary>Lists every event created by the logged-in Organiser (used for the Organiser dashboard).</summary>
+            <response code="200">The Organiser's events, including enrolment counts.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Participants cannot use this endpoint.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EventsController.GetEventById(System.Int32)">
+            <summary>Returns full details of one event, including its categories. Public.</summary>
+            <response code="200">The event and its categories.</response>
+            <response code="404">Event does not exist.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EventsController.CreateEvent(RaceDay.Api.Dtos.EventRequest)">
+            <summary>Creates a new event owned by the logged-in Organiser.</summary>
+            <response code="201">The created event.</response>
+            <response code="400">Validation failed (e.g. eventType not Run/Walk/Cycle).</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Only Organisers can create events.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EventsController.UpdateEvent(System.Int32,RaceDay.Api.Dtos.EventRequest)">
+            <summary>Updates an event. Only the Organiser who created it may do this.</summary>
+            <response code="200">The updated event.</response>
+            <response code="400">Validation failed.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Event does not exist.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EventsController.DeleteEvent(System.Int32)">
+            <summary>Deletes an event (and its categories). Only the owning Organiser may do this.</summary>
+            <response code="204">Event deleted.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Event does not exist.</response>
+            <response code="409">The event already has enrolments and cannot be deleted.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.EventsController.UploadBanner(System.Int32,Microsoft.AspNetCore.Http.IFormFile,System.Threading.CancellationToken)">
+            <summary>Uploads or replaces the banner image for an event (JPG, PNG or WEBP, max 5 MB).</summary>
+            <response code="200">The URL of the stored banner.</response>
+            <response code="400">No file, wrong type, or file too large.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Event does not exist.</response>
+        </member>
+        <member name="T:RaceDay.Api.Controllers.ResultsController">
+            <summary>Organisers capture finish times and positions; Participants view their own race history.</summary>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.ResultsController.CreateResult(System.Int32,RaceDay.Api.Dtos.ResultRequest)">
+            <summary>Captures and publishes a finish time and position for an enrolled Participant.</summary>
+            <response code="201">The created result.</response>
+            <response code="400">Invalid values (e.g. position greater than total finishers) or the enrolment was cancelled.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Enrolment does not exist.</response>
+            <response code="409">A result already exists for this enrolment.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.ResultsController.UpdateResult(System.Int32,RaceDay.Api.Dtos.ResultRequest)">
+            <summary>Updates a previously captured result. Only the owning Organiser may do this.</summary>
+            <response code="200">The updated result.</response>
+            <response code="400">Invalid values.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Result does not exist.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.ResultsController.GetMyResults">
+            <summary>Returns the logged-in Participant's personal race history across all published results.</summary>
+            <response code="200">Results with event name, date, category, finish time and position (most recent first).</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Only Participants can use this endpoint.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.ResultsController.GetEventResults(System.Int32)">
+            <summary>Lists all captured results for an event, ordered by finishing position. Owning Organiser only.</summary>
+            <response code="200">The event's results.</response>
+            <response code="401">Not logged in.</response>
+            <response code="403">Not an Organiser, or the event belongs to another Organiser.</response>
+            <response code="404">Event does not exist.</response>
+        </member>
+        <member name="T:RaceDay.Api.Controllers.UsersController">
+            <summary>The logged-in user's own profile (both roles).</summary>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.UsersController.GetMe">
+            <summary>Returns the logged-in user's profile.</summary>
+            <response code="200">The user's profile.</response>
+            <response code="401">Not logged in.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.UsersController.UpdateMe(RaceDay.Api.Dtos.UpdateProfileRequest)">
+            <summary>Updates the logged-in user's first name, last name and phone number.</summary>
+            <response code="200">The updated profile.</response>
+            <response code="400">Validation failed.</response>
+            <response code="401">Not logged in.</response>
+        </member>
+        <member name="M:RaceDay.Api.Controllers.UsersController.UploadProfilePicture(Microsoft.AspNetCore.Http.IFormFile,System.Threading.CancellationToken)">
+            <summary>Uploads or replaces the logged-in user's profile picture (JPG, PNG or WEBP, max 5 MB).</summary>
+            <response code="200">The URL of the stored picture.</response>
+            <response code="400">No file, wrong type, or file too large.</response>
+            <response code="401">Not logged in.</response>
+        </member>
+        <member name="T:RaceDay.Api.Data.DbSeeder">
+            <summary>
+            Seeds demo data for local development so Swagger can be tried immediately.
+            Passwords are hashed with the same service used by registration.
+            Demo logins:  naledi.khumalo@raceday.co.za / Organiser@123   |   thando.mokoena@example.com / Participant@123
+            </summary>
+        </member>
+        <member name="T:RaceDay.Api.Data.RaceDayDbContext">
+            <summary>
+            EF Core Code-First context. The model mirrors the Part 1 ERD and SQL script
+            (table names, keys, unique constraints, check constraints and delete behaviour).
+            </summary>
+        </member>
+        <member name="P:RaceDay.Api.Dtos.RegisterRequest.Password">
+            <summary>Minimum 8 characters. Stored hashed, never in plain text.</summary>
+        </member>
+        <member name="P:RaceDay.Api.Dtos.RegisterRequest.Role">
+            <summary>"Organiser" or "Participant".</summary>
+        </member>
+        <member name="P:RaceDay.Api.Dtos.RegisterRequest.OrganiserCode">
+            <summary>Secret invite code. Required only when registering as an Organiser.</summary>
+        </member>
+        <member name="P:RaceDay.Api.Dtos.UpdateEnrolmentStatusRequest.Status">
+            <summary>"Pending", "Confirmed" or "Cancelled".</summary>
+        </member>
+        <member name="T:RaceDay.Api.Dtos.EventRequest">
+            <summary>Used for both creating and updating an event.</summary>
+        </member>
+        <member name="P:RaceDay.Api.Dtos.EventRequest.DistanceKm">
+            <summary>Total event distance in kilometres.</summary>
+        </member>
+        <member name="P:RaceDay.Api.Dtos.EventRequest.EventType">
+            <summary>"Run", "Walk" or "Cycle".</summary>
+        </member>
+        <member name="T:RaceDay.Api.Dtos.Mappings">
+            <summary>Entity -> DTO projections. Queryable versions are translated to SQL by EF Core.</summary>
+        </member>
+        <member name="M:RaceDay.Api.Dtos.Mappings.ProjectToResponse(System.Linq.IQueryable{RaceDay.Api.Models.RaceEvent})">
+            <summary>Enrolment count excludes cancelled enrolments.</summary>
+        </member>
+        <member name="P:RaceDay.Api.Dtos.ResultRequest.FinishTime">
+            <summary>Finish time as hh:mm:ss, e.g. "01:45:32".</summary>
+        </member>
+        <member name="T:RaceDay.Api.Models.Enrolment">
+            <summary>Links a Participant to an Event under a chosen Category.</summary>
+        </member>
+        <member name="P:RaceDay.Api.Models.Enrolment.Status">
+            <summary>Pending, Confirmed or Cancelled.</summary>
+        </member>
+        <member name="T:RaceDay.Api.Models.RaceEvent">
+            <summary>A run / walk / cycle event. Mapped to the "Events" table.</summary>
+        </member>
+        <member name="P:RaceDay.Api.Models.RaceEvent.EventType">
+            <summary>Run, Walk or Cycle.</summary>
+        </member>
+        <member name="M:RaceDay.Api.Models.EventTypes.Normalise(System.String)">
+            <summary>Returns the canonical casing ("run" -> "Run"), or null when invalid.</summary>
+        </member>
+        <member name="T:RaceDay.Api.Models.RaceResult">
+            <summary>A participant's finish time/position. Mapped to the "Results" table (1:1 with Enrolments).</summary>
+        </member>
+        <member name="T:RaceDay.Api.Models.Role">
+            <summary>Lookup table for user roles (Organiser, Participant).</summary>
+        </member>
+        <member name="P:RaceDay.Api.Models.User.PasswordHash">
+            <summary>PBKDF2 hash of the password. The plain-text password is never stored.</summary>
+        </member>
+        <member name="T:RaceDay.Api.Security.ApiControllerBase">
+            <summary>Base controller exposing the current session user. Only valid after [SessionAuthorize].</summary>
+        </member>
+        <member name="M:RaceDay.Api.Security.ApiControllerBase.LoadOwnedEventAsync(RaceDay.Api.Data.RaceDayDbContext,System.Int32)">
+            <summary>
+            Loads an event and verifies the logged-in Organiser owns it.
+            Returns 404 when it does not exist and 403 when it belongs to a different Organiser.
+            </summary>
+        </member>
+        <member name="T:RaceDay.Api.Security.SessionAuthorizeAttribute">
+            <summary>
+            Session-based authorisation. Returns 401 when there is no authenticated session and
+            403 when the logged-in user's role is not one of the allowed roles.
+            Usage: [SessionAuthorize] (any logged-in user) or [SessionAuthorize(RoleNames.Organiser)].
+            </summary>
+        </member>
+        <member name="T:RaceDay.Api.Security.SessionKeys">
+            <summary>Keys used to store the authenticated user in the server-side session.</summary>
+        </member>
+        <member name="T:RaceDay.Api.Security.RoleNames">
+            <summary>Role names. These match the rows seeded in the Roles table.</summary>
+        </member>
+        <member name="T:RaceDay.Api.Services.IFileStorageService">
+            <summary>
+            Abstraction over file storage. Part 2 uses local disk (wwwroot/uploads);
+            Part 3 swaps this for an Azure Blob Storage implementation without touching controllers.
+            </summary>
+        </member>
+        <member name="M:RaceDay.Api.Services.IFileStorageService.SaveAsync(Microsoft.AspNetCore.Http.IFormFile,System.String,System.Threading.CancellationToken)">
+            <summary>Saves the file and returns the public URL/path it can be retrieved from.</summary>
+        </member>
+        <member name="T:RaceDay.Api.Services.ImageUploadRules">
+            <summary>Shared validation for image uploads (banner images and profile pictures).</summary>
+        </member>
+        <member name="M:RaceDay.Api.Services.ImageUploadRules.Validate(Microsoft.AspNetCore.Http.IFormFile)">
+            <summary>Returns an error message, or null when the file is acceptable.</summary>
+        </member>
+        <member name="T:RaceDay.Api.Services.PasswordService">
+            <summary>
+            Salted PBKDF2 (HMAC-SHA256) password hashing. Stored format: iterations.salt.hash (Base64).
+            </summary>
+        </member>
+    </members>
+</doc>
